@@ -1,0 +1,35 @@
+# Known city slugs on the citybus.gr platform, as listed on https://citybus.gr.
+# Each maps to a site at https://<slug>.citybus.gr/el/stops. This list is provided
+# for discoverability/convenience. CityBusClient accepts any slug, so a city
+# added to the platform after this list was written will still work.
+KNOWN_CITIES = [
+    "agrinio",
+    "alexandroupoli",
+    "arta",
+    "chalkida",
+    "chania",
+    "chios",
+    "corfu",
+    "drama",
+    "ioannina",
+    "irakleio",
+    "kastoria",
+    "katerini",
+    "kavala",
+    "komotini",
+    "kozani",
+    "lamia",
+    "larisa",
+    "mesologgi",
+    "mitilini",
+    "naousa",
+    "patra",
+    "ptolemaida",
+    "salamina",
+    "serres",
+    "skiathos",
+    "trikala",
+    "veroia",
+    "volos",
+    "xanthi",
+]
