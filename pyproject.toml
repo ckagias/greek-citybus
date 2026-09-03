@@ -25,6 +25,10 @@ dev = [
     "pytest>=8.0",
     "responses>=0.25",
 ]
+web = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+]
 
 [project.scripts]
 greek-citybus = "greek_citybus.cli:main"

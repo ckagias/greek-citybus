@@ -97,6 +97,27 @@ class RedisCache:
 client = CityBusClient("patra", cache=RedisCache(my_redis_client))
 ```
 
+## Web UI / HTTP API
+
+A small FastAPI wrapper is included for browsing trips from a browser or calling over HTTP:
+
+```bash
+source .venv/bin/activate   # on Windows: .venv\Scripts\activate
+pip install -e ".[web]"
+uvicorn greek_citybus.web:app --reload
+```
+
+Then open `http://127.0.0.1:8000/` for a simple form (pick a city, enter a stop ID, optionally
+search/filter by bus number or route text). The same data is available as JSON:
+
+```bash
+curl "http://127.0.0.1:8000/api/trips?city=patra&stop_id=266"
+curl "http://127.0.0.1:8000/api/trips?city=patra&stop_id=266&routes=601&routes=609"
+curl "http://127.0.0.1:8000/api/cities"
+```
+
+Interactive API docs are at `http://127.0.0.1:8000/docs`.
+
 ## Development
 
 ```bash
