@@ -19,7 +19,11 @@ gives you a plain typed interface over the trip data.
 
 ## Install
 
-Not yet published to PyPI, so install from source for now:
+```bash
+pip install greek-citybus
+```
+
+Or install from source:
 
 ```bash
 git clone https://github.com/ckagias/greek-citybus.git
@@ -28,8 +32,6 @@ python3 -m venv .venv
 source .venv/bin/activate   # on Windows: .venv\Scripts\activate
 pip install -e .
 ```
-
-Once published, this will become `pip install greek-citybus`.
 
 ## CLI
 
