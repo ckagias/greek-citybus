@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from .cache import Cache, InMemoryCache
-from .models import BusTrip
+from .models import BusTrip, Stop
 
 API_HOST = "https://rest.citybus.gr/api/v1/el"
 DEFAULT_TIMEOUT_SECONDS = 8
@@ -81,13 +81,19 @@ class CityBusClient:
             return token, agency_code
         return self._scrape_auth()
 
-    def _fetch_trips(self, stop_id: str, day_id: int, retried: bool = False) -> list[dict[str, Any]]:
+    def _agency_code(self) -> str:
         auth = self._get_auth()
         if not auth:
             raise RuntimeError(f"Could not obtain bus API credentials for city '{self.city}'")
-        token, agency_code = auth
+        _, agency_code = auth
+        return agency_code
 
-        url = f"{API_HOST}/{agency_code}/trips/stop/{stop_id}/day/{day_id}"
+    def _fetch_json(self, url: str, retried: bool = False) -> Any:
+        auth = self._get_auth()
+        if not auth:
+            raise RuntimeError(f"Could not obtain bus API credentials for city '{self.city}'")
+        token, _ = auth
+
         res = self._session.get(
             url,
             headers={
@@ -101,12 +107,31 @@ class CityBusClient:
         if res.status_code == 401 and not retried:
             self._cache.delete(self._token_cache_key)
             self._cache.delete(self._agency_cache_key)
-            return self._fetch_trips(stop_id, day_id, retried=True)
+            return self._fetch_json(url, retried=True)
 
         if not res.ok:
             return []
 
         return res.json()
+
+    def _fetch_trips(self, stop_id: str, day_id: int) -> list[dict[str, Any]]:
+        agency_code = self._agency_code()
+        return self._fetch_json(f"{API_HOST}/{agency_code}/trips/stop/{stop_id}/day/{day_id}")
+
+    def get_stops(self) -> list[Stop]:
+        agency_code = self._agency_code()
+        raw_stops = self._fetch_json(f"{API_HOST}/{agency_code}/stops")
+
+        return [
+            Stop(
+                stop_id=str(raw["code"]),
+                name=raw.get("name", ""),
+                latitude=raw.get("latitude", 0.0),
+                longitude=raw.get("longitude", 0.0),
+                line_codes=raw.get("lineCodes") or [],
+            )
+            for raw in raw_stops
+        ]
 
     def get_trips(self, stop_id: str, routes: list[str] | None = None) -> list[BusTrip]:
         """Fetch today's (and, after 20:00 local time, tomorrow's) trips for a stop.

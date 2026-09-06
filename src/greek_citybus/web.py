@@ -30,6 +30,14 @@ class TripOut(BaseModel):
     day_offset: int
 
 
+class StopOut(BaseModel):
+    stop_id: str
+    name: str
+    latitude: float
+    longitude: float
+    line_codes: list[str]
+
+
 @lru_cache(maxsize=64)
 def _client_for(city: str) -> CityBusClient:
     return CityBusClient(city)
@@ -38,6 +46,24 @@ def _client_for(city: str) -> CityBusClient:
 @app.get("/api/cities", response_model=list[str])
 def list_cities() -> list[str]:
     return KNOWN_CITIES
+
+
+@app.get("/api/stops", response_model=list[StopOut])
+def get_stops(
+    city: str = Query(..., description="city slug, e.g. patra, ioannina, volos"),
+    search: str = Query("", description="only include stops whose name contains this text (case-insensitive)"),
+) -> list[StopOut]:
+    client = _client_for(city)
+    try:
+        stops = client.get_stops()
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    if search:
+        needle = search.lower()
+        stops = [s for s in stops if needle in s.name.lower()]
+
+    return [StopOut(**asdict(s)) for s in sorted(stops, key=lambda s: s.name)]
 
 
 @app.get("/api/trips", response_model=list[TripOut])
@@ -72,6 +98,27 @@ def index(
         f'<option value="{escape(c)}"{" selected" if c == city else ""}>{escape(c)}</option>'
         for c in KNOWN_CITIES
     )
+
+    stops_html = ""
+    if city:
+        try:
+            client = _client_for(city)
+            stops = sorted(client.get_stops(), key=lambda s: s.name)
+        except RuntimeError as e:
+            stops_html = f'<p class="error">{escape(str(e))}</p>'
+        else:
+            options = "".join(
+                f'<option value="{escape(s.stop_id)}">{escape(s.name)} (#{escape(s.stop_id)})</option>'
+                for s in stops
+            )
+            stops_html = f"""
+            <label style="margin-bottom: 1.5rem;">Browse stops in {escape(city)} ({len(stops)} found)
+              <select onchange="document.getElementsByName('stop_id')[0].value=this.value">
+                <option value="" disabled selected>select a stop&hellip;</option>
+                {options}
+              </select>
+            </label>
+            """
 
     results_html = ""
     if city and stop_id:
@@ -127,7 +174,7 @@ def index(
 <p>Live arrival/departure times from citybus.gr. Unofficial, not affiliated with citybus.gr.</p>
 <form method="get" action="/">
   <label>City
-    <select name="city" required>
+    <select name="city" required onchange="this.form.submit()">
       <option value="" disabled {"selected" if not city else ""}>select a city</option>
       {city_options}
     </select>
@@ -140,9 +187,11 @@ def index(
   </label>
   <button type="submit" style="align-self: flex-end;">Search</button>
 </form>
+{stops_html}
 {results_html}
 <p style="margin-top:2rem;font-size:0.85rem;color:#666;">
   JSON API: <code>/api/trips?city=patra&amp;stop_id=266</code> &middot;
+  <code>/api/stops?city=patra</code> &middot;
   <code>/api/cities</code> &middot; <a href="/docs">/docs</a>
 </p>
 </body>

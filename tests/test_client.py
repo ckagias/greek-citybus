@@ -75,6 +75,34 @@ def test_invalid_stop_id_rejected():
 
 
 @responses.activate
+def test_get_stops():
+    responses.add(responses.GET, HOMEPAGE_URL, body=HOMEPAGE_HTML, status=200)
+    responses.add(
+        responses.GET,
+        f"{API_HOST}/112/stops",
+        json=[
+            {
+                "id": 12401368,
+                "code": "263",
+                "name": "12ου ΣΥΝΤΑΓΜΑΤΟΣ",
+                "latitude": 38.239,
+                "longitude": 21.747,
+                "lineCodes": ["101", "102"],
+            }
+        ],
+        status=200,
+    )
+
+    client = CityBusClient("patra")
+    stops = client.get_stops()
+
+    assert len(stops) == 1
+    assert stops[0].stop_id == "263"
+    assert stops[0].name == "12ου ΣΥΝΤΑΓΜΑΤΟΣ"
+    assert stops[0].line_codes == ["101", "102"]
+
+
+@responses.activate
 def test_different_cities_use_different_agency_codes():
     responses.add(
         responses.GET,

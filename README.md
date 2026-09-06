@@ -48,8 +48,19 @@ greek-citybus ioannina 100 --routes 3
 ```
 
 Run `greek-citybus --help` for the full list of options, including `-r/--routes` to filter to
-specific bus/line numbers. You'll need to know the numeric stop ID for the stop you want; find
-it by browsing `https://<city>.citybus.gr/el/stops` in your browser and picking a stop.
+specific bus/line numbers. You'll need to know the numeric stop ID for the stop you want. Look it
+up with the `stops` command, optionally filtering by name with `-s/--search`:
+
+```bash
+greek-citybus stops patra
+greek-citybus stops patra --search "πλατεια"
+```
+
+```
+290      ΑΓ. ΔΙΟΝΥΣΙΟΣ - ΕΠΙΚΕΝΤΡΟ                lines: 111,502,503,804
+745      ΚΕΝΤΡΟ ΒΡΑΧΝΕΪΚΑ                         lines: 503
+...
+```
 
 ## Library usage
 
@@ -61,6 +72,14 @@ trips = client.get_trips(stop_id="266", routes=["201", "301"])
 
 for trip in trips:
     print(trip.bus_number, trip.route, trip.time)
+```
+
+To discover stop IDs programmatically, use `get_stops()`:
+
+```python
+stops = client.get_stops()
+for stop in stops:
+    print(stop.stop_id, stop.name, stop.line_codes)
 ```
 
 - `city`: the citybus.gr subdomain slug, e.g. `"patra"`, `"ioannina"`, `"volos"`. See
@@ -107,12 +126,15 @@ pip install -e ".[web]"
 uvicorn greek_citybus.web:app --reload
 ```
 
-Then open `http://127.0.0.1:8000/` for a simple form (pick a city, enter a stop ID, optionally
-search/filter by bus number or route text). The same data is available as JSON:
+Then open `http://127.0.0.1:8000/` for a simple form (pick a city, browse/select a stop from the
+dropdown it populates, optionally search/filter by bus number or route text). The same data is
+available as JSON:
 
 ```bash
 curl "http://127.0.0.1:8000/api/trips?city=patra&stop_id=266"
 curl "http://127.0.0.1:8000/api/trips?city=patra&stop_id=266&routes=601&routes=609"
+curl "http://127.0.0.1:8000/api/stops?city=patra"
+curl "http://127.0.0.1:8000/api/stops?city=patra&search=πλατεια"
 curl "http://127.0.0.1:8000/api/cities"
 ```
 
