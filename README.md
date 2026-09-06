@@ -1,5 +1,7 @@
 # Greek City Bus
 
+[![PyPI](https://img.shields.io/pypi/v/greek-citybus.svg)](https://pypi.org/project/greek-citybus/)
+
 Unofficial Python client for live bus arrival/departure times across the ~29 Greek cities
 running on the [citybus.gr](https://citybus.gr) platform, including Patras, Ioannina, Volos,
 Larisa, Chania, Irakleio, and more.
