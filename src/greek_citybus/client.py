@@ -26,6 +26,15 @@ AGENCY_CODE_PATTERN = re.compile(r"(?:const|var|let)\s+agencyCode\s*=\s*(\d+)")
 TOKEN_TTL_SECONDS = 3600
 
 
+class CityBusAPIError(RuntimeError):
+    """Raised when citybus.gr responds with an unexpected non-2xx status."""
+
+    def __init__(self, status_code: int, url: str):
+        self.status_code = status_code
+        self.url = url
+        super().__init__(f"citybus.gr returned HTTP {status_code} for {url}")
+
+
 class CityBusClient:
     """Client for the (unofficial, reverse-engineered) citybus.gr platform,
     which powers live bus arrival/departure boards for ~29 Greek cities
@@ -110,7 +119,7 @@ class CityBusClient:
             return self._fetch_json(url, retried=True)
 
         if not res.ok:
-            return []
+            raise CityBusAPIError(res.status_code, url)
 
         return res.json()
 
@@ -153,10 +162,16 @@ class CityBusClient:
         def to_bus_trips(raw_trips: list[dict[str, Any]], day_offset: int) -> list[BusTrip]:
             result = []
             for trip in raw_trips:
-                raw_time = trip.get("tripTime") or trip.get("ArrivalTime") or "00:00"
+                raw_time = trip.get("tripTime") or trip.get("ArrivalTime")
+                raw_line = trip.get("lineCode") or trip.get("LineID")
+                if raw_time is None or raw_line is None:
+                    # Missing required fields from the API - skip rather than
+                    # fabricate a "00:00"/"??" placeholder that could collide
+                    # with a legitimate midnight departure.
+                    continue
                 result.append(
                     BusTrip(
-                        bus_number=str(trip.get("lineCode") or trip.get("LineID") or "??"),
+                        bus_number=str(raw_line),
                         route=trip.get("routeName") or trip.get("RouteDescr") or "Διαδρομή",
                         time=str(raw_time)[:5],
                         day_offset=day_offset,
@@ -173,8 +188,6 @@ class CityBusClient:
             if key in seen:
                 continue
             seen.add(key)
-            if trip.time == "00:00" and trip.bus_number == "??":
-                continue
             if routes is not None and trip.bus_number not in routes:
                 continue
             unique.append(trip)

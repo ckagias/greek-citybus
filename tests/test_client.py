@@ -1,9 +1,10 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import pytest
 import responses
 
-from greek_citybus import CityBusClient
+from greek_citybus import CityBusAPIError, CityBusClient
 from greek_citybus.client import API_HOST
 
 
@@ -63,6 +64,62 @@ def test_token_refetched_on_401():
     trips = client.get_trips("1234")
 
     assert trips == []
+
+
+@responses.activate
+def test_server_error_raises_instead_of_empty_list():
+    today_url = _trips_url(_today_index())
+    responses.add(responses.GET, HOMEPAGE_URL, body=HOMEPAGE_HTML, status=200)
+    responses.add(responses.GET, today_url, json={"error": "boom"}, status=500)
+
+    client = CityBusClient("patra")
+    with pytest.raises(CityBusAPIError) as exc_info:
+        client.get_trips("1234")
+
+    assert exc_info.value.status_code == 500
+
+
+@responses.activate
+def test_persistent_401_raises_after_retry():
+    today_url = _trips_url(_today_index())
+    responses.add(responses.GET, HOMEPAGE_URL, body=HOMEPAGE_HTML, status=200)
+    responses.add(responses.GET, today_url, json={}, status=401)
+    responses.add(responses.GET, HOMEPAGE_URL, body=HOMEPAGE_HTML, status=200)
+    responses.add(responses.GET, today_url, json={}, status=401)
+
+    client = CityBusClient("patra")
+    with pytest.raises(CityBusAPIError) as exc_info:
+        client.get_trips("1234")
+
+    assert exc_info.value.status_code == 401
+
+
+@responses.activate
+def test_trip_with_missing_time_or_line_is_skipped_not_fabricated():
+    today_url = _trips_url(_today_index())
+    responses.add(responses.GET, HOMEPAGE_URL, body=HOMEPAGE_HTML, status=200)
+    responses.add(
+        responses.GET,
+        today_url,
+        json=[
+            # legitimate midnight departure - must be kept
+            {"tripTime": "00:00:00", "lineCode": "101", "routeName": "Night Line"},
+            # missing time entirely - must be dropped, not fabricated as 00:00
+            {"lineCode": "202", "routeName": "Broken"},
+            # missing line entirely - must be dropped, not fabricated as ??
+            {"tripTime": "07:30:00", "routeName": "Broken"},
+        ],
+        status=200,
+    )
+    if _fetches_tomorrow():
+        responses.add(responses.GET, _trips_url((_today_index() + 1) % 7), json=[], status=200)
+
+    client = CityBusClient("patra")
+    trips = client.get_trips("1234")
+
+    assert len(trips) == 1
+    assert trips[0].bus_number == "101"
+    assert trips[0].time == "00:00"
 
 
 def test_invalid_stop_id_rejected():
