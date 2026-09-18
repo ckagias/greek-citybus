@@ -10,6 +10,7 @@ import time
 from dataclasses import asdict
 from functools import lru_cache
 from html import escape
+from importlib.metadata import version
 from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -43,6 +44,7 @@ limiter = Limiter(key_func=_client_ip)
 app = FastAPI(
     title="Greek City Bus",
     description="Unofficial live bus arrival/departure lookup for citybus.gr cities.",
+    version=version("greek-citybus"),
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
