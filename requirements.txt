@@ -1,3 +1,4 @@
 requests>=2.31
 fastapi>=0.110
 uvicorn[standard]>=0.29
+slowapi>=0.1.9
