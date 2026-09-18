@@ -6,6 +6,9 @@ Unofficial Python client for live bus arrival/departure times across the ~29 Gre
 running on the [citybus.gr](https://citybus.gr) platform, including Patras, Ioannina, Volos,
 Larisa, Chania, Irakleio, and more.
 
+Live demo: **[greek-citybus.onrender.com](https://greek-citybus.onrender.com)** (free tier, may take
+up to a minute to wake up if idle)
+
 > **Disclaimer:** This is an independent, unofficial project. It is **not affiliated with,
 > endorsed by, or supported by** citybus.gr, any Astiko KTEL operator, or any transit authority.
 > It works by reading a public webpage and calling an **undocumented internal API** that the
@@ -122,7 +125,8 @@ client = CityBusClient("patra", cache=RedisCache(my_redis_client))
 
 ## Web UI / HTTP API
 
-A small FastAPI wrapper is included for browsing trips from a browser or calling over HTTP:
+A small FastAPI wrapper is included for browsing trips from a browser or calling over HTTP. It's
+live at [greek-citybus.onrender.com](https://greek-citybus.onrender.com), or run it locally:
 
 ```bash
 source .venv/bin/activate   # on Windows: .venv\Scripts\activate
@@ -142,7 +146,10 @@ curl "http://127.0.0.1:8000/api/stops?city=patra&search=πλατεια"
 curl "http://127.0.0.1:8000/api/cities"
 ```
 
-Interactive API docs are at `http://127.0.0.1:8000/docs`.
+Interactive API docs are at `/docs` (e.g. `http://127.0.0.1:8000/docs`).
+
+Trip/stop results are cached for 60 seconds per city/stop to avoid hammering citybus.gr's
+undocumented upstream API, and each endpoint is rate-limited to 30 requests/minute per client IP.
 
 ## Development
 
