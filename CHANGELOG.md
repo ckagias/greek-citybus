@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-18
+
 ### Fixed
 
 - `CityBusClient._fetch_json` swallowed any non-2xx HTTP response (403, 404, 500, a persistent 401 after the retry) by silently returning `[]`. `get_stops()` and `get_trips()` looked identical whether citybus.gr had no data or was actually down, and both the CLI and web UI printed "No stops/trips found" for a real outage. It now raises the new `CityBusAPIError` (a `RuntimeError` subclass carrying `status_code` and `url`), which the CLI and web UI already catch via their existing `except RuntimeError` handlers.

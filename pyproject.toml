@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "greek-citybus"
-version = "0.1.0"
+version = "0.1.1"
 description = "Unofficial Python client for live bus arrival/departure times across ~29 Greek cities on the citybus.gr platform"
 readme = "README.md"
 requires-python = ">=3.10"
