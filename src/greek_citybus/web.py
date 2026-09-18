@@ -17,14 +17,28 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from .cities import KNOWN_CITIES
 from .client import CityBusClient
 
 RESULT_CACHE_TTL_SECONDS = 60
 
-limiter = Limiter(key_func=get_remote_address)
+
+def _client_ip(request: Request) -> str:
+    # request.client.host is Render's proxy, not the visitor - use Cloudflare's
+    # True-Client-IP (can't be spoofed) or fall back to X-Forwarded-For.
+    true_client_ip = request.headers.get("true-client-ip")
+    if true_client_ip:
+        return true_client_ip
+
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+
+    return request.client.host if request.client else "unknown"
+
+
+limiter = Limiter(key_func=_client_ip)
 
 app = FastAPI(
     title="Greek City Bus",
@@ -37,12 +51,7 @@ _result_cache: dict[tuple, tuple[Any, float]] = {}
 
 
 def _cached(key: tuple, fetch: Callable[[], Any]) -> Any:
-    """Cache the result of `fetch()` under `key` for RESULT_CACHE_TTL_SECONDS.
-
-    Bus times only change on the scale of minutes, and this endpoint is polled
-    by uptime monitors as well as real users, so a short TTL avoids hammering
-    citybus.gr's undocumented upstream API for data that hasn't changed.
-    """
+    # Short TTL avoids hammering citybus.gr's undocumented API on every request.
     now = time.monotonic()
     cached = _result_cache.get(key)
     if cached is not None:
